@@ -58,17 +58,15 @@ const categorySchema = new mongoose.Schema(
   }
 );
 
-categorySchema.index({ slug: 1 });
 categorySchema.index({ isActive: 1, sortOrder: 1 });
 
-categorySchema.pre('save', function (next) {
+categorySchema.pre('save', function () {
   if (this.isModified('name') && !this.slug) {
     this.slug = this.name
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
   }
-  next();
 });
 
 const Category = mongoose.model('Category', categorySchema);

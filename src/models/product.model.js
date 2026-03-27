@@ -84,7 +84,7 @@ const productSchema = new mongoose.Schema(
       type:    Boolean,
       default: false,
     },
-    isNew: {
+    isNewArrival: {
       type:    Boolean,
       default: false,
     },
@@ -133,7 +133,7 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ category: 1, status: 1 });
 productSchema.index({ featured: 1 });
 productSchema.index({ isFlashDeal: 1 });
-productSchema.index({ isNew: 1 });
+productSchema.index({ isNewArrival: 1 });
 productSchema.index({ name: 'text', description: 'text', tags: 'text' });
 productSchema.index({ price: 1 });
 productSchema.index({ rating: -1 });
@@ -144,13 +144,12 @@ productSchema.virtual('image').get(function () {
   return this.images?.[0]?.url ?? '';
 });
 
-productSchema.pre('save', function (next) {
+productSchema.pre('save', function () {
   if (this.originalPrice && this.price) {
     this.discountPercent = Math.round(
       ((this.originalPrice - this.price) / this.originalPrice) * 100
     );
   }
-  next();
 });
 
 const Product = mongoose.model('Product', productSchema);

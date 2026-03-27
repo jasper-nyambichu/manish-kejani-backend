@@ -9,22 +9,26 @@ import {
   removeProductImage,
   patchFeatured,
   patchStockStatus,
+  handleUploadErrors,
 } from '../../controllers/admin/adminProduct.controller.js';
 import adminAuth from '../../middleware/adminAuth.js';
-import { upload } from '../../config/cloudinary.js';
+import { upload, uploadToCloudinary } from '../../config/cloudinary.js';
 import { uploadLimiter } from '../../middleware/rateLimiter.js';
 
 const router = Router();
 
 router.use(adminAuth);
 
-router.get('/', listProducts);
+router.get('/',    listProducts);
 router.get('/:id', fetchProduct);
-router.post('/', uploadLimiter, upload.array('images', 5), addProduct);
-router.put('/:id', uploadLimiter, upload.array('images', 5), editProduct);
-router.delete('/:id', removeProduct);
+
+// multer runs first, then handleUploadErrors catches multer errors, then controller
+router.post('/',    uploadLimiter, upload.any(), uploadToCloudinary, handleUploadErrors, addProduct);
+router.put('/:id',  uploadLimiter, upload.any(), uploadToCloudinary, handleUploadErrors, editProduct);
+
+router.delete('/:id',       removeProduct);
 router.delete('/:id/image', removeProductImage);
 router.patch('/:id/featured', patchFeatured);
-router.patch('/:id/stock', patchStockStatus);
+router.patch('/:id/stock',    patchStockStatus);
 
 export default router;

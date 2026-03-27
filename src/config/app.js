@@ -60,7 +60,14 @@ const createApp = async () => {
 
   app.use(express.json({ limit: '10kb' }));
   app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-  app.use(mongoSanitize());
+  // NOTE: Do NOT use app.use(mongoSanitize()) — Express 5 makes req.query read-only
+  // and mongoSanitize tries to overwrite it, causing a 500 on every request.
+  // Instead, sanitize body and params directly.
+  app.use((_req, _res, next) => {
+    if (_req.body)   mongoSanitize.sanitize(_req.body);
+    if (_req.params) mongoSanitize.sanitize(_req.params);
+    next();
+  });
   app.use(compression());
 
   if (process.env.NODE_ENV !== 'test') {

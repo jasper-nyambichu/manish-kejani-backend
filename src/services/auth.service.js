@@ -75,13 +75,10 @@ export const verifyEmail = async (token) => {
   user.isVerified = true;
   user.verificationToken = undefined;
   user.verificationExpiry = undefined;
-  await user.save();
-
   const { accessToken, refreshToken } = generateTokenPair(user._id);
-
   user.refreshToken = refreshToken;
   user.lastLogin = new Date();
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   return {
     accessToken,
@@ -109,7 +106,7 @@ export const resendVerificationEmail = async (email) => {
 
   user.verificationToken = verificationToken;
   user.verificationExpiry = verificationExpiry;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
@@ -141,7 +138,7 @@ export const loginUser = async ({ username, password }) => {
 
   user.refreshToken = refreshToken;
   user.lastLogin = new Date();
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   return {
     accessToken,
@@ -158,7 +155,13 @@ export const loginUser = async ({ username, password }) => {
 export const refreshUserToken = async (token) => {
   if (!token) throw new AppError('Refresh token required', 400);
 
-  const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+  } catch {
+    throw new AppError('Invalid or expired refresh token', 401);
+  }
+
   const user = await User.findById(decoded.id).select('+refreshToken');
 
   if (!user || user.refreshToken !== token) {
@@ -168,7 +171,7 @@ export const refreshUserToken = async (token) => {
   const { accessToken, refreshToken } = generateTokenPair(user._id);
 
   user.refreshToken = refreshToken;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   return { accessToken, refreshToken };
 };
@@ -193,7 +196,7 @@ export const forgotPassword = async (email) => {
 
   user.resetCode = resetCode;
   user.resetCodeExpiry = resetCodeExpiry;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   await sendPasswordResetEmail({
     to: email,
@@ -223,7 +226,7 @@ export const verifyResetCode = async (email, code) => {
 
   user.resetCode = resetSessionToken;
   user.resetCodeExpiry = new Date(Date.now() + 10 * 60 * 1000);
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   return {
     message: 'Code verified. You may now reset your password.',
@@ -265,7 +268,7 @@ export const handleGoogleCallback = async (user) => {
   const { accessToken, refreshToken } = generateTokenPair(user._id);
 
   user.refreshToken = refreshToken;
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   return { accessToken, refreshToken };
 };
@@ -309,6 +312,6 @@ export const toggleWishlist = async (userId, productId) => {
     action = 'removed';
   }
 
-  await user.save();
+  await user.save({ validateBeforeSave: false });
   return { action, wishlistCount: user.wishlist.length };
 };

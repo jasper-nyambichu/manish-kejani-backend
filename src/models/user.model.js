@@ -71,6 +71,11 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    role: {
+      type:    String,
+      enum:    ['user', 'admin'],
+      default: 'user',
+    },
   },
   {
     timestamps: true,
@@ -92,14 +97,9 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.index({ username: 1 });
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
-
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password') || !this.password) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('password') || !this.password) return;
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
 userSchema.methods.comparePassword = async function (candidate) {

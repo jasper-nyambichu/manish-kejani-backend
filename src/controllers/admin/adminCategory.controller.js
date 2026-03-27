@@ -3,7 +3,7 @@ import Category from '../../models/category.model.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { sendSuccess } from '../../shared/utils/apiResponse.js';
 import asyncHandler from '../../shared/utils/asyncHandler.js';
-import { upload, deleteImage } from '../../config/cloudinary.js';
+import { deleteImage } from '../../config/cloudinary.js';
 
 export const listCategories = asyncHandler(async (_req, res) => {
   const categories = await Category.find()
