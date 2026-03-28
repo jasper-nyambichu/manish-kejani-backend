@@ -40,7 +40,15 @@ const createApp = async () => {
   app.use(
     cors({
       origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        // Allow requests with no origin (mobile apps, Postman, server-to-server)
+        if (!origin) return cb(null, true);
+        // Always allow localhost for development
+        if (origin.includes('localhost')) return cb(null, true);
+        // Always allow Vercel deployments for this project
+        if (origin.includes('manish-kejani.vercel.app')) return cb(null, true);
+        if (origin.includes('vercel.app')) return cb(null, true);
+        // Check against configured origins
+        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
         cb(new Error(`CORS: origin ${origin} not allowed`));
       },
       credentials: true,
