@@ -21,13 +21,9 @@ const prodFormat = combine(
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL ?? 'info',
   format: process.env.NODE_ENV === 'production' ? prodFormat : devFormat,
+  // NOTE: No file transports in production — Render has a read-only filesystem
+  // All logs go to console (stdout) which Render captures automatically
   transports: [
     new winston.transports.Console(),
-    ...(process.env.NODE_ENV === 'production'
-      ? [
-          new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-          new winston.transports.File({ filename: 'logs/combined.log' }),
-        ]
-      : []),
   ],
 });
