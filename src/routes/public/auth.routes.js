@@ -15,6 +15,7 @@ import {
   getProfile,
   updateProfile,
   wishlistToggle,
+  changePassword,
 } from '../../controllers/public/auth.controller.js';
 import { protect } from '../../middleware/userAuth.js';
 import { authLimiter } from '../../middleware/rateLimiter.js';
@@ -45,6 +46,7 @@ router.get(
 
 router.get('/profile', protect, getProfile);
 router.patch('/profile', protect, updateProfile);
+router.post('/change-password', protect, changePassword);
 router.post('/wishlist/:productId', protect, wishlistToggle);
 router.delete('/wishlist/:productId', protect, wishlistToggle);
 

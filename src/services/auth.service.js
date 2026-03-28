@@ -33,28 +33,27 @@ export const registerUser = async ({ username, email, phone, password }) => {
   if (existing?.email === email) throw new AppError('Email already registered', 409);
   if (existing?.username === username) throw new AppError('Username already taken', 409);
 
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
   const user = await User.create({
     username,
     email,
     phone,
     password,
-    verificationToken,
-    verificationExpiry,
+    isVerified: true,
   });
 
-  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-
-  await sendVerificationEmail({ to: email, username, verificationUrl });
+  const { accessToken, refreshToken } = generateTokenPair(user._id);
+  user.refreshToken = refreshToken;
+  user.lastLogin    = new Date();
+  await user.save({ validateBeforeSave: false });
 
   return {
-    message: 'Account created. Please check your email to verify your account.',
+    message: 'Account created successfully. Welcome to Manish Kejani!',
+    accessToken,
+    refreshToken,
     user: {
-      id: user._id,
-      username: user.username,
-      email: user.email,
+      id:         user._id,
+      username:   user.username,
+      email:      user.email,
       isVerified: user.isVerified,
     },
   };
@@ -128,10 +127,6 @@ export const loginUser = async ({ username, password }) => {
 
   if (!user || !(await user.comparePassword(password))) {
     throw new AppError('Invalid username or password', 401);
-  }
-
-  if (!user.isVerified) {
-    throw new AppError('Please verify your email before logging in', 403);
   }
 
   const { accessToken, refreshToken } = generateTokenPair(user._id);

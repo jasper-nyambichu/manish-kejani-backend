@@ -1,5 +1,6 @@
 // src/controllers/public/auth.controller.js
 import jwt from 'jsonwebtoken';
+import User from '../../models/user.model.js';
 import {
   registerUser,
   verifyEmail,
@@ -17,11 +18,16 @@ import {
 } from '../../services/auth.service.js';
 import { sendSuccess } from '../../shared/utils/apiResponse.js';
 import asyncHandler from '../../shared/utils/asyncHandler.js';
+import { AppError } from '../../shared/utils/AppError.js';
 
 export const register = asyncHandler(async (req, res) => {
   const { username, email, phone, password } = req.body;
   const result = await registerUser({ username, email, phone, password });
-  sendSuccess(res, 201, result.message, { user: result.user });
+  sendSuccess(res, 201, result.message, {
+    user:         result.user,
+    accessToken:  result.accessToken,
+    refreshToken: result.refreshToken,
+  });
 });
 
 export const verifyEmailHandler = asyncHandler(async (req, res) => {
@@ -93,4 +99,20 @@ export const wishlistToggle = asyncHandler(async (req, res) => {
   const result = await toggleWishlist(req.user._id, req.params.productId);
   const message = result.action === 'added' ? 'Added to wishlist' : 'Removed from wishlist';
   sendSuccess(res, 200, message, result);
+});
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) throw new AppError('Both passwords are required', 400);
+  if (newPassword.length < 6) throw new AppError('New password must be at least 6 characters', 400);
+
+  const user = await User.findById(req.user._id).select('+password');
+  if (!user) throw new AppError('User not found', 404);
+  if (!(await user.comparePassword(currentPassword))) throw new AppError('Current password is incorrect', 401);
+
+  user.password = newPassword;
+  user.refreshToken = null;
+  await user.save();
+
+  sendSuccess(res, 200, 'Password changed successfully. Please log in again.');
 });
