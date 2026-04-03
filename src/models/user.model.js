@@ -33,36 +33,37 @@ const toUser = (row) => {
 const User = {
   // Find one user by filter object
   async findOne(filter, { select } = {}) {
-    let query = supabase.from(TABLE).select('*');
-
-    if (filter.email)              query = query.eq('email', filter.email);
-    if (filter.username)           query = query.eq('username', filter.username);
-    if (filter.googleId)           query = query.eq('google_id', filter.googleId);
-    if (filter.id)                 query = query.eq('id', filter.id);
-    if (filter.role)               query = query.eq('role', filter.role);
-    if (filter.verificationToken)  query = query.eq('verification_token', filter.verificationToken);
-    if (filter.resetCode)          query = query.eq('reset_code', filter.resetCode);
-    if (filter.refreshToken)       query = query.eq('refresh_token', filter.refreshToken);
-
-    // $or: [{ email }, { username }]
+    // Handle $or separately — builds its own query
     if (filter.$or) {
       const conditions = filter.$or.map((cond) => {
         if (cond.email)    return `email.eq.${cond.email}`;
         if (cond.username) return `username.eq.${cond.username}`;
         return null;
       }).filter(Boolean).join(',');
-      query = supabase.from(TABLE).select('*').or(conditions);
+      const { data, error } = await supabase.from(TABLE).select('*').or(conditions).limit(1);
+      if (error) throw new Error(error.message);
+      return toUser(data?.[0] ?? null);
     }
 
-    const { data, error } = await query.limit(1).single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toUser(data);
+    let query = supabase.from(TABLE).select('*');
+    if (filter.email)             query = query.eq('email',              filter.email);
+    if (filter.username)          query = query.eq('username',           filter.username);
+    if (filter.googleId)          query = query.eq('google_id',          filter.googleId);
+    if (filter.id)                query = query.eq('id',                 filter.id);
+    if (filter.role)              query = query.eq('role',               filter.role);
+    if (filter.verificationToken) query = query.eq('verification_token', filter.verificationToken);
+    if (filter.resetCode)         query = query.eq('reset_code',         filter.resetCode);
+    if (filter.refreshToken)      query = query.eq('refresh_token',      filter.refreshToken);
+
+    const { data, error } = await query.limit(1);
+    if (error) throw new Error(error.message);
+    return toUser(data?.[0] ?? null);
   },
 
   async findById(id) {
-    const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toUser(data);
+    const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).limit(1);
+    if (error) throw new Error(error.message);
+    return toUser(data?.[0] ?? null);
   },
 
   async find(filter = {}, { sort, skip = 0, limit = 20, select } = {}) {
@@ -118,9 +119,10 @@ const User = {
 
   async findByIdAndUpdate(id, updates, { new: returnNew = false } = {}) {
     const row = _toRow(updates);
-    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().single();
+    if (Object.keys(row).length === 0) return this.findById(id);
+    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select();
     if (error) throw new Error(error.message);
-    return toUser(data);
+    return toUser(data?.[0] ?? null);
   },
 
   async save(user) {
