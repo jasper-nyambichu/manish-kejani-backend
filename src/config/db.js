@@ -1,33 +1,29 @@
 // src/config/db.js
-import mongoose from 'mongoose';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from '../shared/utils/logger.js';
 
-const MAX_RETRIES = 5;
-const RETRY_DELAY = 5000;
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+  {
+    db:   { schema: 'public' },
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: { 'x-application-name': 'manish-kejani-backend' },
+      fetch: (url, options = {}) => fetch(url, { ...options, keepalive: true }),
+    },
+  }
+);
 
-const connectDB = async (retries = MAX_RETRIES) => {
+export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-
-    logger.info(`MongoDB connected: ${conn.connection.host}`);
-
-    mongoose.connection.on('disconnected', () => {
-      logger.warn('MongoDB disconnected — attempting reconnect');
-      setTimeout(() => connectDB(MAX_RETRIES), RETRY_DELAY);
-    });
-
+    const { error } = await supabase.from('users').select('id').limit(1);
+    if (error) throw new Error(error.message);
+    logger.info('PostgreSQL (Supabase) connected successfully');
   } catch (err) {
-    logger.error(`MongoDB connection failed: ${err.message}`);
-    if (retries > 0) {
-      await new Promise((res) => setTimeout(res, RETRY_DELAY));
-      return connectDB(retries - 1);
-    }
+    logger.error(`Database connection failed: ${err.message}`);
     process.exit(1);
   }
 };
 
-export default connectDB;
+export default supabase;

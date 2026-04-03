@@ -10,3 +10,75 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
+
+      # Supabase
+      - key: SUPABASE_URL
+        value: https://vpbgcawglxlucbvmakfm.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYmdjYXdnbHhsdWNidm1ha2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDIxMzAsImV4cCI6MjA5MDc3ODEzMH0.feRijAk71D-nSENGySUdyUTwwTaDaGuc1mNh5qfew00
+      - key: SUPABASE_SERVICE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwYmdjYXdnbHhsdWNidm1ha2ZtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTIwMjEzMCwiZXhwIjoyMDkwNzc4MTMwfQ.SEiwsz6S9hk9MpN1IVg1QZ6KCRssiZuXD_zTbdhGjV4
+      - key: DB_URL
+        value: postgresql://postgres.vpbgcawglxlucbvmakfm:kbWR7dBWzELgO5ov@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+      # JWT — User
+      - key: JWT_SECRET
+        value: 3b3b0602a78573cc5f319477f6b7417cacd32e2e959afa2d4e26d2f54eb66aa2b45469bdb2dc6cca875b93478acb7cddf69b2245aa518bc46c141a9e73ce73f5
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_SECRET
+        value: 5fc0bfeedbcd28db27f70af34a40dd6763742056a48c87d7460ad8496832a4c38c554520f5cecb2d885ad86a6044fc8405b2be61b77b21a5066858885e6f8586
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # JWT — Admin
+      - key: ADMIN_JWT_SECRET
+        value: 03d63c320c47e46760750d01b1fbfd8f563b466b01571535064ccf8adb2412f0f6c8ee7e0b128ae80a4971e40763de3ceba801c233ce111fa83d3443e87ff8cb
+      - key: ADMIN_JWT_EXPIRES_IN
+        value: 15m
+      - key: ADMIN_REFRESH_SECRET
+        value: 884a7bd77f5f975dc1637d038fc527b8bacb80525a6cf1e03ab25398a7ea1455816a0605b6a4b3025f629134d89c310e3fb1aaed9e4ede3b7073acfa8e105a8c
+      - key: ADMIN_REFRESH_EXPIRES_IN
+        value: 7d
+
+      # Cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        value: djsyabmc4
+      - key: CLOUDINARY_API_KEY
+        value: 962469958192725
+      - key: CLOUDINARY_API_SECRET
+        value: zTlApyBd0y42cwKd5qZL01PlGb8
+
+      # Email
+      - key: RESEND_API_KEY
+        value: re_XHonAVdA_MSKqyoggE4bjm5AQMmpaKVu7
+      - key: RESEND_FROM
+        value: Manish Kejani <onboarding@resend.dev>
+
+      # Google OAuth — set these manually in Render dashboard
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://manish-kejani-backend.onrender.com/api/v1/auth/google/callback
+
+      # Session
+      - key: SESSION_SECRET
+        value: a5b3af86eb9603ad8953a3a27d41a36e8c3be0cfef2df55b3f86dbe379d7ad4b
+
+      # App URLs
+      - key: WHATSAPP_NUMBER
+        value: 254719769263
+      - key: FRONTEND_URL
+        value: https://manishkejani.co.ke
+      - key: BACKEND_URL
+        value: https://manish-kejani-backend.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://manishkejani.co.ke,https://manish-kejani.vercel.app
+
+      # Logging
+      - key: LOG_LEVEL
+        value: info

@@ -26,60 +26,49 @@ const safeParseFloat = (value, fieldName) => {
 const toBool = (value) => value === 'true' || value === true;
 
 export const getProducts = async (filters = {}) => {
-  const query = {};
+  const productFilter = {};
 
   if (filters.status) {
-    query.status = filters.status;
+    productFilter.status = filters.status;
   } else {
-    query.status = { $ne: PRODUCT_STATUS.OUT_OF_STOCK };
+    productFilter.excludeStatus = PRODUCT_STATUS.OUT_OF_STOCK;
   }
 
-  if (filters.category)               query.category     = filters.category;
-  if (filters.featured === 'true')    query.featured     = true;
-  if (filters.isFlashDeal === 'true') query.isFlashDeal  = true;
-  if (filters.isNewArrival === 'true') query.isNewArrival = true;
+  if (filters.category)               productFilter.category_id    = filters.category;
+  if (filters.featured === 'true')    productFilter.featured        = true;
+  if (filters.isFlashDeal === 'true') productFilter.is_flash_deal   = true;
+  if (filters.isNewArrival === 'true') productFilter.is_new_arrival = true;
 
   if (filters.minPrice || filters.maxPrice) {
-    query.price = {};
-    if (filters.minPrice) query.price.$gte = parseFloat(filters.minPrice);
-    if (filters.maxPrice) query.price.$lte = parseFloat(filters.maxPrice);
+    productFilter.price = {};
+    if (filters.minPrice) productFilter.price.$gte = parseFloat(filters.minPrice);
+    if (filters.maxPrice) productFilter.price.$lte = parseFloat(filters.maxPrice);
   }
 
-  const sortOptions = {
-    newest:     { createdAt: -1 },
-    oldest:     { createdAt:  1 },
-    price_asc:  { price:      1 },
-    price_desc: { price:     -1 },
-    rating:     { rating:    -1 },
-    popular:    { viewCount: -1 },
+  const sortMap = {
+    newest:     { _key: 'newest' },
+    oldest:     { _key: 'oldest' },
+    price_asc:  { _key: 'price_asc' },
+    price_desc: { _key: 'price_desc' },
+    rating:     { _key: 'rating' },
+    popular:    { _key: 'popular' },
   };
 
-  const sort  = sortOptions[filters.sort] ?? sortOptions.newest;
+  const sort  = sortMap[filters.sort] ?? sortMap.newest;
   const page  = Math.max(1, parseInt(filters.page  ?? '1',  10));
   const limit = Math.min(100, Math.max(1, parseInt(filters.limit ?? '20', 10)));
   const skip  = (page - 1) * limit;
 
   const [products, total] = await Promise.all([
-    Product.find(query)
-      .populate('category', 'name slug icon')
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Product.countDocuments(query),
+    Product.find(productFilter, { sort, skip, limit }),
+    Product.countDocuments(productFilter),
   ]);
 
-  return {
-    products,
-    pagination: { total, page, limit, pages: Math.ceil(total / limit) },
-  };
+  return { products, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
 };
 
 export const getProductById = async (id) => {
-  const product = await Product.findById(id)
-    .populate('category', 'name slug icon')
-    .lean();
-
+  const product = await Product.findById(id);
   if (!product) throw new AppError('Product not found', 404);
 
   Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch((err) =>
@@ -90,60 +79,41 @@ export const getProductById = async (id) => {
 };
 
 export const getProductsByCategory = async (slug, filters = {}) => {
-  const category = await Category.findOne({ slug, isActive: true }).lean();
+  const category = await Category.findOne({ slug, isActive: true });
   if (!category) throw new AppError('Category not found', 404);
-  return getProducts({ ...filters, category: category._id });
+  return getProducts({ ...filters, category: category.id });
 };
 
 export const searchProducts = async (query, filters = {}) => {
   if (!query?.trim()) throw new AppError('Search query is required', 400);
-
-  const searchQuery = {
-    $text:  { $search: query },
-    status: { $ne: PRODUCT_STATUS.OUT_OF_STOCK },
-  };
 
   const page  = Math.max(1, parseInt(filters.page  ?? '1',  10));
   const limit = Math.min(100, Math.max(1, parseInt(filters.limit ?? '20', 10)));
   const skip  = (page - 1) * limit;
 
   const [products, total] = await Promise.all([
-    Product.find(searchQuery, { score: { $meta: 'textScore' } })
-      .populate('category', 'name slug icon')
-      .sort({ score: { $meta: 'textScore' } })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Product.countDocuments(searchQuery),
+    Product.search(query, { skip, limit }),
+    Product.searchCount(query),
   ]);
 
-  return {
-    products,
-    pagination: { total, page, limit, pages: Math.ceil(total / limit) },
-  };
+  return { products, pagination: { total, page, limit, pages: Math.ceil(total / limit) } };
 };
 
 export const getFeaturedProducts = async (limit = 8) => {
-  return Product.find({ featured: true, status: PRODUCT_STATUS.IN_STOCK })
-    .populate('category', 'name slug icon')
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .lean();
+  return Product.find({ featured: true, status: PRODUCT_STATUS.IN_STOCK }, { limit });
 };
 
 export const getRelatedProducts = async (productId, limit = 4) => {
-  const product = await Product.findById(productId).lean();
+  const product = await Product.findById(productId);
   if (!product) throw new AppError('Product not found', 404);
 
+  const categoryId = typeof product.category === 'object' ? product.category.id : product.category;
+
   return Product.find({
-    category: product.category,
-    _id:      { $ne: productId },
-    status:   PRODUCT_STATUS.IN_STOCK,
-  })
-    .populate('category', 'name slug icon')
-    .sort({ rating: -1 })
-    .limit(limit)
-    .lean();
+    category_id:   categoryId,
+    excludeId:     productId,
+    status:        PRODUCT_STATUS.IN_STOCK,
+  }, { sort: { _key: 'rating' }, limit });
 };
 
 export const createProduct = async (data, files = []) => {
@@ -158,7 +128,7 @@ export const createProduct = async (data, files = []) => {
     throw new AppError('Name, description, price and category are required', 400);
   }
 
-  const categoryExists = await Category.findById(category).lean();
+  const categoryExists = await Category.findById(category);
   if (!categoryExists) throw new AppError('Category not found', 404);
 
   let images = [];
@@ -192,9 +162,7 @@ export const createProduct = async (data, files = []) => {
     logger.warn(`productCount increment failed: ${err.message}`)
   );
 
-  return Product.findById(product._id)
-    .populate('category', 'name slug icon')
-    .lean();
+  return Product.findById(product.id);
 };
 
 export const updateProduct = async (id, data, files = []) => {
@@ -225,22 +193,18 @@ export const updateProduct = async (id, data, files = []) => {
     delete updates.imageUrl;
   }
 
-  if (updates.category && updates.category !== product.category.toString()) {
-    const categoryExists = await Category.findById(updates.category).lean();
+  if (updates.category && updates.category !== (typeof product.category === 'object' ? product.category.id : product.category)) {
+    const categoryExists = await Category.findById(updates.category);
     if (!categoryExists) throw new AppError('Category not found', 404);
 
+    const oldCategoryId = typeof product.category === 'object' ? product.category.id : product.category;
     Promise.all([
-      Category.findByIdAndUpdate(product.category,  { $inc: { productCount: -1 } }),
-      Category.findByIdAndUpdate(updates.category,  { $inc: { productCount:  1 } }),
+      Category.findByIdAndUpdate(oldCategoryId,    { $inc: { productCount: -1 } }),
+      Category.findByIdAndUpdate(updates.category, { $inc: { productCount:  1 } }),
     ]).catch((err) => logger.warn(`productCount sync failed: ${err.message}`));
   }
 
-  return Product.findByIdAndUpdate(id, updates, {
-    new:           true,
-    runValidators: true,
-  })
-    .populate('category', 'name slug icon')
-    .lean();
+  return Product.findByIdAndUpdate(id, updates);
 };
 
 export const deleteProduct = async (id) => {
@@ -253,8 +217,9 @@ export const deleteProduct = async (id) => {
       .map((img) => deleteImage(img.publicId))
   );
 
+  const categoryId = typeof product.category === 'object' ? product.category.id : product.category;
   await Promise.all([
-    Category.findByIdAndUpdate(product.category, { $inc: { productCount: -1 } }),
+    Category.findByIdAndUpdate(categoryId, { $inc: { productCount: -1 } }),
     Product.findByIdAndDelete(id),
   ]);
 };
@@ -268,42 +233,25 @@ export const deleteProductImage = async (productId, publicId) => {
   const imageIndex = product.images.findIndex((img) => img.publicId === publicId);
   if (imageIndex === -1) throw new AppError('Image not found on this product', 404);
 
-  if (!publicId.startsWith('external_')) {
-    await deleteImage(publicId);
-  }
+  if (!publicId.startsWith('external_')) await deleteImage(publicId);
 
-  product.images.splice(imageIndex, 1);
-  await product.save({ validateBeforeSave: false });
-
-  return product;
+  const newImages = [...product.images];
+  newImages.splice(imageIndex, 1);
+  return Product.findByIdAndUpdate(productId, { images: newImages });
 };
 
 export const toggleFeatured = async (id) => {
   const product = await Product.findById(id);
   if (!product) throw new AppError('Product not found', 404);
-
-  product.featured = !product.featured;
-  await product.save({ validateBeforeSave: false });
-
-  return product;
+  return Product.findByIdAndUpdate(id, { featured: !product.featured });
 };
 
 export const updateStockStatus = async (id, status) => {
   if (!status) throw new AppError('Status is required', 400);
-
   if (!Object.values(PRODUCT_STATUS).includes(status)) {
-    throw new AppError(
-      `Invalid stock status. Valid values: ${Object.values(PRODUCT_STATUS).join(', ')}`,
-      400
-    );
+    throw new AppError(`Invalid stock status. Valid values: ${Object.values(PRODUCT_STATUS).join(', ')}`, 400);
   }
-
-  const product = await Product.findByIdAndUpdate(
-    id,
-    { status },
-    { new: true, runValidators: true }
-  ).lean();
-
+  const product = await Product.findByIdAndUpdate(id, { status });
   if (!product) throw new AppError('Product not found', 404);
   return product;
 };

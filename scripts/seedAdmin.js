@@ -1,23 +1,24 @@
 // scripts/seedAdmin.js
 import 'dotenv/config';
-import mongoose from 'mongoose';
-import Admin from '../src/models/admin.model.js';
+import { connectDB } from '../src/config/db.js';
+import User from '../src/models/user.model.js';
 import Category from '../src/models/category.model.js';
 import { DEFAULT_CATEGORIES } from '../src/shared/constants/categories.js';
 import { logger } from '../src/shared/utils/logger.js';
 
 const seedAdmin = async () => {
-  const existing = await Admin.findOne({ username: process.env.SEED_ADMIN_USERNAME });
-
+  const existing = await User.findOne({ username: process.env.SEED_ADMIN_USERNAME });
   if (existing) {
     logger.warn('Admin already exists — skipping');
     return;
   }
 
-  await Admin.create({
-    username: process.env.SEED_ADMIN_USERNAME,
-    email:    process.env.SEED_ADMIN_EMAIL,
-    password: process.env.SEED_ADMIN_PASSWORD,
+  await User.create({
+    username:   process.env.SEED_ADMIN_USERNAME,
+    email:      process.env.SEED_ADMIN_EMAIL,
+    password:   process.env.SEED_ADMIN_PASSWORD,
+    role:       'admin',
+    isVerified: true,
   });
 
   logger.info(`Admin created: ${process.env.SEED_ADMIN_USERNAME}`);
@@ -25,7 +26,6 @@ const seedAdmin = async () => {
 
 const seedCategories = async () => {
   const count = await Category.countDocuments();
-
   if (count > 0) {
     logger.warn(`Categories already exist (${count}) — skipping`);
     return;
@@ -37,12 +37,9 @@ const seedCategories = async () => {
 
 const seed = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    logger.info('Connected to MongoDB');
-
+    await connectDB();
     await seedAdmin();
     await seedCategories();
-
     logger.info('Seed complete');
     process.exit(0);
   } catch (err) {

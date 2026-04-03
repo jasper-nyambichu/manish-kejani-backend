@@ -11,16 +11,19 @@ import { sendSuccess } from '../../shared/utils/apiResponse.js';
 import asyncHandler from '../../shared/utils/asyncHandler.js';
 
 export const listProducts = asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
   const result = await getProducts(req.query);
   sendSuccess(res, 200, 'Products retrieved', result);
 });
 
 export const fetchProduct = asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=300');
   const product = await getProductById(req.params.id);
   sendSuccess(res, 200, 'Product retrieved', product);
 });
 
 export const listByCategory = asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
   const result = await getProductsByCategory(req.params.slug, req.query);
   sendSuccess(res, 200, 'Products retrieved', result);
 });
@@ -31,12 +34,14 @@ export const search = asyncHandler(async (req, res) => {
 });
 
 export const featured = asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=300');
   const limit = parseInt(req.query.limit ?? '8', 10);
   const products = await getFeaturedProducts(limit);
   sendSuccess(res, 200, 'Featured products retrieved', products);
 });
 
 export const related = asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=300');
   const limit = parseInt(req.query.limit ?? '4', 10);
   const products = await getRelatedProducts(req.params.id, limit);
   sendSuccess(res, 200, 'Related products retrieved', products);

@@ -7,7 +7,6 @@ import compression from 'compression';
 import morgan from 'morgan';
 import session from 'express-session';
 
-import connectDB from './db.js';
 import passport from './passport.js';
 import { logger } from '../shared/utils/logger.js';
 import { publicLimiter } from '../middleware/rateLimiter.js';
@@ -25,9 +24,7 @@ import adminPromotionRoutes from '../routes/admin/adminPromotion.routes.js';
 import adminDashboardRoutes from '../routes/admin/adminDashboard.routes.js';
 import whatsappRoutes from '../routes/public/whatsapp.routes.js';
 
-const createApp = async () => {
-  await connectDB();
-
+const createApp = () => {
   const app = express();
 
   app.use(helmet());

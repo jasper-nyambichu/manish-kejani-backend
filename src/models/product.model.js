@@ -1,157 +1,201 @@
 // src/models/product.model.js
-import mongoose from 'mongoose';
-import { PRODUCT_STATUS } from '../shared/constants/productStatus.js';
+import supabase from '../config/db.js';
 
-const imageSchema = new mongoose.Schema(
-  {
-    url:      { type: String, required: true },
-    publicId: { type: String, required: true },
+const TABLE = 'products';
+
+const toProduct = (row, categoryRow = null) => {
+  if (!row) return null;
+  const category = categoryRow
+    ? { id: categoryRow.id, name: categoryRow.name, slug: categoryRow.slug, icon: categoryRow.icon }
+    : row.category_id;
+
+  return {
+    id:              row.id,
+    _id:             row.id,
+    name:            row.name,
+    description:     row.description,
+    price:           parseFloat(row.price),
+    originalPrice:   row.original_price ? parseFloat(row.original_price) : null,
+    discountPercent: row.discount_percent,
+    category:        category,
+    subcategory:     row.subcategory ?? null,
+    images:          row.images ?? [],
+    image:           row.images?.[0]?.url ?? '',
+    status:          row.status,
+    featured:        row.featured,
+    isFlashDeal:     row.is_flash_deal,
+    isNewArrival:    row.is_new_arrival,
+    rating:          parseFloat(row.rating),
+    reviews:         row.reviews,
+    specifications:  row.specifications ?? [],
+    tags:            row.tags ?? [],
+    sku:             row.sku ?? null,
+    viewCount:       row.view_count,
+    createdAt:       row.created_at,
+    updatedAt:       row.updated_at,
+  };
+};
+
+const _calcDiscount = (price, originalPrice) => {
+  if (!originalPrice || !price) return 0;
+  return Math.round(((originalPrice - price) / originalPrice) * 100);
+};
+
+const Product = {
+  async find(filter = {}, { sort, skip = 0, limit = 20, populate } = {}) {
+    let query = supabase
+      .from(TABLE)
+      .select('*, categories!products_category_id_fkey(id, name, slug, icon)');
+
+    if (filter.status)                    query = query.eq('status', filter.status);
+    if (filter.excludeStatus)             query = query.neq('status', filter.excludeStatus);
+    if (filter.category_id)               query = query.eq('category_id', filter.category_id);
+    if (filter.featured === true)         query = query.eq('featured', true);
+    if (filter.is_flash_deal === true)    query = query.eq('is_flash_deal', true);
+    if (filter.is_new_arrival === true)   query = query.eq('is_new_arrival', true);
+    if (filter.price?.$gte !== undefined) query = query.gte('price', filter.price.$gte);
+    if (filter.price?.$lte !== undefined) query = query.lte('price', filter.price.$lte);
+    if (filter.excludeId)                 query = query.neq('id', filter.excludeId);
+
+    const sortMap = {
+      newest:     ['created_at', false],
+      oldest:     ['created_at', true],
+      price_asc:  ['price', true],
+      price_desc: ['price', false],
+      rating:     ['rating', false],
+      popular:    ['view_count', false],
+    };
+
+    if (sort?._key && sortMap[sort._key]) {
+      const [col, asc] = sortMap[sort._key];
+      query = query.order(col, { ascending: asc });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    query = query.range(skip, skip + limit - 1);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => toProduct(row, row.categories));
   },
-  { _id: false }
-);
 
-const specificationSchema = new mongoose.Schema(
-  {
-    label: { type: String, required: true, trim: true },
-    value: { type: String, required: true, trim: true },
+  async findById(id) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('*, categories!products_category_id_fkey(id, name, slug, icon)')
+      .eq('id', id)
+      .single();
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return toProduct(data, data?.categories);
   },
-  { _id: false }
-);
 
-const productSchema = new mongoose.Schema(
-  {
-    name: {
-      type:      String,
-      required:  [true, 'Product name is required'],
-      trim:      true,
-      maxlength: 200,
-    },
-    description: {
-      type:      String,
-      required:  [true, 'Product description is required'],
-      trim:      true,
-      maxlength: 2000,
-    },
-    price: {
-      type:     Number,
-      required: [true, 'Price is required'],
-      min:      [0, 'Price cannot be negative'],
-    },
-    originalPrice: {
-      type: Number,
-      min:  [0, 'Original price cannot be negative'],
-      validate: {
-        validator: function (v) {
-          if (!v) return true;
-          return v >= this.price;
-        },
-        message: 'Original price must be greater than or equal to current price',
-      },
-    },
-    discountPercent: {
-      type:    Number,
-      min:     0,
-      max:     100,
-      default: 0,
-    },
-    category: {
-      type:     mongoose.Schema.Types.ObjectId,
-      ref:      'Category',
-      required: [true, 'Category is required'],
-    },
-    subcategory: {
-      type:      String,
-      trim:      true,
-      maxlength: 100,
-    },
-    images: {
-      type: [imageSchema],
-      validate: {
-        validator: (v) => v.length <= 5,
-        message:   'Maximum 5 images per product',
-      },
-    },
-    status: {
-      type:    String,
-      enum:    Object.values(PRODUCT_STATUS),
-      default: PRODUCT_STATUS.IN_STOCK,
-    },
-    featured: {
-      type:    Boolean,
-      default: false,
-    },
-    isFlashDeal: {
-      type:    Boolean,
-      default: false,
-    },
-    isNewArrival: {
-      type:    Boolean,
-      default: false,
-    },
-    rating: {
-      type:    Number,
-      default: 0,
-      min:     0,
-      max:     5,
-    },
-    reviews: {
-      type:    Number,
-      default: 0,
-      min:     0,
-    },
-    specifications: {
-      type:    [specificationSchema],
-      default: [],
-    },
-    tags: [{ type: String, trim: true, maxlength: 50 }],
-    sku: {
-      type:   String,
-      trim:   true,
-      unique: true,
-      sparse: true,
-    },
-    viewCount: {
-      type:    Number,
-      default: 0,
-      min:     0,
-    },
+  async countDocuments(filter = {}) {
+    let query = supabase.from(TABLE).select('id', { count: 'exact', head: true });
+
+    if (filter.status)            query = query.eq('status', filter.status);
+    if (filter.excludeStatus)     query = query.neq('status', filter.excludeStatus);
+    if (filter.featured === true) query = query.eq('featured', true);
+    if (filter.category_id)       query = query.eq('category_id', filter.category_id);
+
+    const { count, error } = await query;
+    if (error) throw new Error(error.message);
+    return count ?? 0;
   },
-  {
-    timestamps: true,
-    toJSON: {
-      virtuals: true,
-      transform: (_doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
-        return ret;
-      },
-    },
-  }
-);
 
-productSchema.index({ category: 1, status: 1 });
-productSchema.index({ featured: 1 });
-productSchema.index({ isFlashDeal: 1 });
-productSchema.index({ isNewArrival: 1 });
-productSchema.index({ name: 'text', description: 'text', tags: 'text' });
-productSchema.index({ price: 1 });
-productSchema.index({ rating: -1 });
-productSchema.index({ createdAt: -1 });
-productSchema.index({ status: 1, featured: -1, createdAt: -1 });
+  async create(data) {
+    const discountPercent = _calcDiscount(data.price, data.originalPrice);
+    const row = {
+      name:             data.name,
+      description:      data.description,
+      price:            data.price,
+      original_price:   data.originalPrice ?? null,
+      discount_percent: discountPercent,
+      category_id:      data.category,
+      subcategory:      data.subcategory ?? null,
+      images:           data.images ?? [],
+      status:           data.status ?? 'in_stock',
+      featured:         data.featured ?? false,
+      is_flash_deal:    data.isFlashDeal ?? false,
+      is_new_arrival:   data.isNewArrival ?? false,
+      specifications:   data.specifications ?? [],
+      tags:             data.tags ?? [],
+      sku:              data.sku ?? null,
+    };
+    const { data: created, error } = await supabase.from(TABLE).insert(row).select(
+      '*, categories!products_category_id_fkey(id, name, slug, icon)'
+    ).single();
+    if (error) throw new Error(error.message);
+    return toProduct(created, created.categories);
+  },
 
-productSchema.virtual('image').get(function () {
-  return this.images?.[0]?.url ?? '';
-});
+  async findByIdAndUpdate(id, updates, { new: returnNew = false } = {}) {
+    const row = {};
+    if (updates.name            !== undefined) row.name             = updates.name;
+    if (updates.description     !== undefined) row.description      = updates.description;
+    if (updates.price           !== undefined) row.price            = updates.price;
+    if (updates.originalPrice   !== undefined) row.original_price   = updates.originalPrice;
+    if (updates.category        !== undefined) row.category_id      = updates.category;
+    if (updates.subcategory     !== undefined) row.subcategory      = updates.subcategory;
+    if (updates.images          !== undefined) row.images           = updates.images;
+    if (updates.status          !== undefined) row.status           = updates.status;
+    if (updates.featured        !== undefined) row.featured         = updates.featured;
+    if (updates.isFlashDeal     !== undefined) row.is_flash_deal    = updates.isFlashDeal;
+    if (updates.isNewArrival    !== undefined) row.is_new_arrival   = updates.isNewArrival;
+    if (updates.specifications  !== undefined) row.specifications   = updates.specifications;
+    if (updates.tags            !== undefined) row.tags             = updates.tags;
+    if (updates.sku             !== undefined) row.sku              = updates.sku;
+    if (updates.rating          !== undefined) row.rating           = updates.rating;
+    if (updates.reviews         !== undefined) row.reviews          = updates.reviews;
 
-productSchema.pre('save', function () {
-  if (this.originalPrice && this.price) {
-    this.discountPercent = Math.round(
-      ((this.originalPrice - this.price) / this.originalPrice) * 100
-    );
-  }
-});
+    if (updates.$inc?.viewCount) {
+      const { data: cur } = await supabase.from(TABLE).select('view_count').eq('id', id).single();
+      row.view_count = (cur?.view_count ?? 0) + updates.$inc.viewCount;
+    }
 
-const Product = mongoose.model('Product', productSchema);
+    if (row.price !== undefined || row.original_price !== undefined) {
+      const { data: cur } = await supabase.from(TABLE).select('price, original_price').eq('id', id).single();
+      const p  = row.price          ?? cur?.price;
+      const op = row.original_price ?? cur?.original_price;
+      row.discount_percent = _calcDiscount(p, op);
+    }
+
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update(row)
+      .eq('id', id)
+      .select('*, categories!products_category_id_fkey(id, name, slug, icon)')
+      .single();
+    if (error) throw new Error(error.message);
+    return toProduct(data, data?.categories);
+  },
+
+  async findByIdAndDelete(id) {
+    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  async search(query, { skip = 0, limit = 20 } = {}) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('*, categories!products_category_id_fkey(id, name, slug, icon)')
+      .neq('status', 'out_of_stock')
+      .textSearch('name', query, { type: 'websearch', config: 'english' })
+      .order('created_at', { ascending: false })
+      .range(skip, skip + limit - 1);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => toProduct(row, row.categories));
+  },
+
+  async searchCount(query) {
+    const { count, error } = await supabase
+      .from(TABLE)
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'out_of_stock')
+      .textSearch('name', query, { type: 'websearch', config: 'english' });
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  },
+};
 
 export default Product;

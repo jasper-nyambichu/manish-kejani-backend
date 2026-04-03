@@ -1,17 +1,21 @@
 // server.js
 import 'dotenv/config';
 import createApp from './src/config/app.js';
+import { connectDB } from './src/config/db.js';
 import { logger } from './src/shared/utils/logger.js';
 
 const PORT = parseInt(process.env.PORT ?? '5000', 10);
 
 const start = async () => {
   try {
-    const app = await createApp();
+    const app = createApp();
 
     const server = app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} [${process.env.NODE_ENV ?? 'development'}]`);
     });
+
+    // Connect DB after server is already listening
+    connectDB();
 
     // Keep-alive ping — prevents Render free tier from spinning down
     // Pings the health endpoint every 14 minutes

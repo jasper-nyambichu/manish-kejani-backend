@@ -5,32 +5,19 @@ import { deleteImage } from '../config/cloudinary.js';
 
 export const getActivePromotions = async () => {
   const now = new Date();
-
   return Promotion.find({
-    isActive: true,
+    isActive:  true,
     startDate: { $lte: now },
-    endDate: { $gte: now },
-  })
-    .populate('products', 'name price images discountPercent')
-    .populate('categories', 'name slug')
-    .sort({ createdAt: -1 })
-    .lean();
+    endDate:   { $gte: now },
+  });
 };
 
 export const getAllPromotions = async () => {
-  return Promotion.find()
-    .populate('products', 'name price')
-    .populate('categories', 'name slug')
-    .sort({ createdAt: -1 })
-    .lean();
+  return Promotion.find();
 };
 
 export const getPromotionById = async (id) => {
-  const promotion = await Promotion.findById(id)
-    .populate('products', 'name price images')
-    .populate('categories', 'name slug')
-    .lean();
-
+  const promotion = await Promotion.findById(id);
   if (!promotion) throw new AppError('Promotion not found', 404);
   return promotion;
 };
@@ -50,17 +37,14 @@ export const createPromotion = async (data, file = null) => {
     title,
     description,
     discountPercent: parseInt(discountPercent, 10),
-    products: products ? JSON.parse(products) : [],
+    products:   products   ? JSON.parse(products)   : [],
     categories: categories ? JSON.parse(categories) : [],
-    startDate: new Date(startDate),
-    endDate: new Date(endDate),
+    startDate:  new Date(startDate),
+    endDate:    new Date(endDate),
   };
 
   if (file) {
-    promotionData.bannerImage = {
-      url: file.path,
-      publicId: file.filename,
-    };
+    promotionData.bannerImage = { url: file.path, publicId: file.filename };
   }
 
   return Promotion.create(promotionData);
@@ -73,38 +57,28 @@ export const updatePromotion = async (id, data, file = null) => {
   const updates = { ...data };
 
   if (updates.discountPercent) updates.discountPercent = parseInt(updates.discountPercent, 10);
-  if (updates.products) updates.products = JSON.parse(updates.products);
-  if (updates.categories) updates.categories = JSON.parse(updates.categories);
-  if (updates.startDate) updates.startDate = new Date(updates.startDate);
-  if (updates.endDate) updates.endDate = new Date(updates.endDate);
+  if (updates.products)        updates.products        = JSON.parse(updates.products);
+  if (updates.categories)      updates.categories      = JSON.parse(updates.categories);
+  if (updates.startDate)       updates.startDate       = new Date(updates.startDate);
+  if (updates.endDate)         updates.endDate         = new Date(updates.endDate);
 
   if (updates.startDate && updates.endDate && updates.startDate >= updates.endDate) {
     throw new AppError('End date must be after start date', 400);
   }
 
   if (file) {
-    if (promotion.bannerImage?.publicId) {
-      await deleteImage(promotion.bannerImage.publicId);
-    }
-    updates.bannerImage = {
-      url: file.path,
-      publicId: file.filename,
-    };
+    if (promotion.bannerImage?.publicId) await deleteImage(promotion.bannerImage.publicId);
+    updates.bannerImage = { url: file.path, publicId: file.filename };
   }
 
-  return Promotion.findByIdAndUpdate(id, updates, {
-    new: true,
-    runValidators: true,
-  });
+  return Promotion.findByIdAndUpdate(id, updates);
 };
 
 export const deletePromotion = async (id) => {
   const promotion = await Promotion.findById(id);
   if (!promotion) throw new AppError('Promotion not found', 404);
 
-  if (promotion.bannerImage?.publicId) {
-    await deleteImage(promotion.bannerImage.publicId);
-  }
+  if (promotion.bannerImage?.publicId) await deleteImage(promotion.bannerImage.publicId);
 
   await Promotion.findByIdAndDelete(id);
 };
@@ -113,8 +87,5 @@ export const togglePromotionStatus = async (id) => {
   const promotion = await Promotion.findById(id);
   if (!promotion) throw new AppError('Promotion not found', 404);
 
-  promotion.isActive = !promotion.isActive;
-  await promotion.save();
-
-  return promotion;
+  return Promotion.findByIdAndUpdate(id, { isActive: !promotion.isActive });
 };

@@ -15,7 +15,7 @@ router.get('/number', (_req, res) => {
 });
 
 router.post('/order/:productId', protect, asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.productId).lean();
+  const product = await Product.findById(req.params.productId);
   if (!product) throw new AppError('Product not found', 404);
 
   const { quantity = 1 } = req.body;

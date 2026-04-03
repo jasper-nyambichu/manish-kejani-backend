@@ -21,12 +21,12 @@ export const refresh = asyncHandler(async (req, res) => {
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  await logoutAdmin(req.admin._id);
+  await logoutAdmin(req.admin.id);
   sendSuccess(res, 200, 'Logged out successfully');
 });
 
 export const updatePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  await changeAdminPassword(req.admin._id, currentPassword, newPassword);
+  await changeAdminPassword(req.admin.id, currentPassword, newPassword);
   sendSuccess(res, 200, 'Password updated. Please log in again.');
 });

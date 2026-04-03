@@ -55,7 +55,7 @@ export const refresh = asyncHandler(async (req, res) => {
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  await logoutUser(req.user._id);
+  await logoutUser(req.user.id);
   sendSuccess(res, 200, 'Logged out successfully');
 });
 
@@ -86,17 +86,17 @@ export const googleCallback = asyncHandler(async (req, res) => {
 });
 
 export const getProfile = asyncHandler(async (req, res) => {
-  const user = await getUserProfile(req.user._id);
+  const user = await getUserProfile(req.user.id);
   sendSuccess(res, 200, 'Profile retrieved', user);
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {
-  const user = await updateUserProfile(req.user._id, req.body);
+  const user = await updateUserProfile(req.user.id, req.body);
   sendSuccess(res, 200, 'Profile updated', user);
 });
 
 export const wishlistToggle = asyncHandler(async (req, res) => {
-  const result = await toggleWishlist(req.user._id, req.params.productId);
+  const result = await toggleWishlist(req.user.id, req.params.productId);
   const message = result.action === 'added' ? 'Added to wishlist' : 'Removed from wishlist';
   sendSuccess(res, 200, message, result);
 });
@@ -106,13 +106,15 @@ export const changePassword = asyncHandler(async (req, res) => {
   if (!currentPassword || !newPassword) throw new AppError('Both passwords are required', 400);
   if (newPassword.length < 6) throw new AppError('New password must be at least 6 characters', 400);
 
-  const user = await User.findById(req.user._id).select('+password');
+  const user = await User.findById(req.user.id);
   if (!user) throw new AppError('User not found', 404);
-  if (!(await user.comparePassword(currentPassword))) throw new AppError('Current password is incorrect', 401);
 
-  user.password = newPassword;
-  user.refreshToken = null;
-  await user.save();
+  const valid = await User.comparePassword(currentPassword, user.password);
+  if (!valid) throw new AppError('Current password is incorrect', 401);
+
+  const bcrypt = await import('bcryptjs');
+  const hashed = await bcrypt.default.hash(newPassword, 12);
+  await User.findByIdAndUpdate(user.id, { password: hashed, refreshToken: null });
 
   sendSuccess(res, 200, 'Password changed successfully. Please log in again.');
 });

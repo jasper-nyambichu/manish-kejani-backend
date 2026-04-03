@@ -7,41 +7,35 @@ import { logger } from '../shared/utils/logger.js';
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientID:     process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      callbackURL:  process.env.GOOGLE_CALLBACK_URL,
     },
     async (_accessToken, _refreshToken, profile, done) => {
       try {
         const email = profile.emails?.[0]?.value;
-
-        if (!email) {
-          return done(new Error('No email returned from Google'), null);
-        }
+        if (!email) return done(new Error('No email returned from Google'), null);
 
         let user = await User.findOne({ googleId: profile.id });
-
         if (user) {
-          user.lastLogin = new Date();
-          await user.save();
+          await User.findByIdAndUpdate(user.id, { lastLogin: new Date() });
           return done(null, user);
         }
 
         user = await User.findOne({ email });
-
         if (user) {
-          user.googleId = profile.id;
-          user.authProvider = 'google';
-          user.isVerified = true;
-          user.lastLogin = new Date();
-          await user.save();
-          return done(null, user);
+          await User.findByIdAndUpdate(user.id, {
+            googleId:     profile.id,
+            authProvider: 'google',
+            isVerified:   true,
+            lastLogin:    new Date(),
+          });
+          return done(null, { ...user, googleId: profile.id, authProvider: 'google', isVerified: true });
         }
 
         const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
         let username = baseUsername;
-        let counter = 1;
-
+        let counter  = 1;
         while (await User.findOne({ username })) {
           username = `${baseUsername}${counter}`;
           counter++;
@@ -50,10 +44,10 @@ passport.use(
         user = await User.create({
           username,
           email,
-          googleId: profile.id,
+          googleId:     profile.id,
           authProvider: 'google',
-          isVerified: true,
-          lastLogin: new Date(),
+          isVerified:   true,
+          lastLogin:    new Date(),
         });
 
         return done(null, user);

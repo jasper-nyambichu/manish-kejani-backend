@@ -1,64 +1,30 @@
 // src/models/admin.model.js
-import mongoose from 'mongoose';
+// NOTE: Admins are users with role='admin' — same as original MongoDB implementation.
+// This model re-exports User with admin-specific helpers for backward compatibility.
+import User from './user.model.js';
 import bcrypt from 'bcryptjs';
+import supabase from '../config/db.js';
 
-const adminSchema = new mongoose.Schema(
-  {
-    username: {
-      type:      String,
-      required:  [true, 'Username is required'],
-      unique:    true,
-      trim:      true,
-      minlength: 3,
-      maxlength: 30,
-    },
-    email: {
-      type:      String,
-      required:  [true, 'Email is required'],
-      unique:    true,
-      lowercase: true,
-      trim:      true,
-    },
-    password: {
-      type:      String,
-      required:  [true, 'Password is required'],
-      minlength: 8,
-      select:    false,
-    },
-    refreshToken: {
-      type:   String,
-      select: false,
-    },
-    lastLogin: {
-      type: Date,
-    },
+const Admin = {
+  async findOne(filter = {}) {
+    return User.findOne({ ...filter, role: 'admin' });
   },
-  {
-    timestamps: true,
-    toJSON: {
-      virtuals: true,
-      transform: (_doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
-        delete ret.password;
-        delete ret.refreshToken;
-        return ret;
-      },
-    },
-  }
-);
 
-adminSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
+  async findById(id) {
+    const user = await User.findById(id);
+    if (!user || user.role !== 'admin') return null;
+    return user;
+  },
 
-adminSchema.methods.comparePassword = async function (candidate) {
-  return bcrypt.compare(candidate, this.password);
+  async create(data) {
+    return User.create({ ...data, role: 'admin', isVerified: true });
+  },
+
+  async findByIdAndUpdate(id, updates) {
+    return User.findByIdAndUpdate(id, updates);
+  },
+
+  comparePassword: async (plainText, hashed) => bcrypt.compare(plainText, hashed),
 };
-
-const Admin = mongoose.model('Admin', adminSchema);
 
 export default Admin;
