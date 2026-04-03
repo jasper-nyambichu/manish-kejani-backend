@@ -41,9 +41,9 @@ const Review = {
     if (filter.user_id)    query = query.eq('user_id', filter.user_id);
     if (filter.id)         query = query.eq('id', filter.id);
 
-    const { data, error } = await query.limit(1).single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toReview(data);
+    const { data, error } = await query.limit(1);
+    if (error) throw new Error(error.message);
+    return toReview(data?.[0] ?? null);
   },
 
   async findById(id) {
@@ -51,9 +51,9 @@ const Review = {
       .from(TABLE)
       .select('*, users(id, username)')
       .eq('id', id)
-      .single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toReview(data);
+      .limit(1);
+    if (error) throw new Error(error.message);
+    return toReview(data?.[0] ?? null);
   },
 
   async countDocuments(filter = {}) {
@@ -75,10 +75,9 @@ const Review = {
     const { data: created, error } = await supabase
       .from(TABLE)
       .insert(row)
-      .select('*, users(id, username)')
-      .single();
+      .select('*, users(id, username)');
     if (error) throw new Error(error.message);
-    return toReview(created);
+    return toReview(created?.[0] ?? null);
   },
 
   async findByIdAndUpdate(id, updates) {
@@ -90,10 +89,9 @@ const Review = {
       .from(TABLE)
       .update(row)
       .eq('id', id)
-      .select('*, users(id, username)')
-      .single();
+      .select('*, users(id, username)');
     if (error) throw new Error(error.message);
-    return toReview(data);
+    return toReview(data?.[0] ?? null);
   },
 
   async findByIdAndDelete(id) {

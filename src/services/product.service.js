@@ -30,7 +30,8 @@ export const getProducts = async (filters = {}) => {
 
   if (filters.status) {
     productFilter.status = filters.status;
-  } else {
+  } else if (filters.status !== null) {
+    // null means admin wants all — undefined means public (exclude out_of_stock)
     productFilter.excludeStatus = PRODUCT_STATUS.OUT_OF_STOCK;
   }
 

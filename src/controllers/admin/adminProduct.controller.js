@@ -26,7 +26,7 @@ export const handleUploadErrors = (err, _req, _res, next) => {
 };
 
 export const listProducts = asyncHandler(async (req, res) => {
-  const result = await getProducts({ ...req.query, status: undefined });
+  const result = await getProducts({ ...req.query, status: req.query.status ?? null });
   sendSuccess(res, 200, 'Products retrieved', result);
 });
 

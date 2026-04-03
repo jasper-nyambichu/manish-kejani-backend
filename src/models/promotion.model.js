@@ -38,9 +38,9 @@ const Promotion = {
   },
 
   async findById(id) {
-    const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toPromotion(data);
+    const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).limit(1);
+    if (error) throw new Error(error.message);
+    return toPromotion(data?.[0] ?? null);
   },
 
   async countDocuments(filter = {}) {
@@ -66,9 +66,9 @@ const Promotion = {
       banner_url:       data.bannerImage?.url ?? null,
       banner_public_id: data.bannerImage?.publicId ?? null,
     };
-    const { data: created, error } = await supabase.from(TABLE).insert(row).select().single();
+    const { data: created, error } = await supabase.from(TABLE).insert(row).select();
     if (error) throw new Error(error.message);
-    return toPromotion(created);
+    return toPromotion(created?.[0] ?? null);
   },
 
   async findByIdAndUpdate(id, updates, { new: returnNew = false } = {}) {
@@ -86,9 +86,9 @@ const Promotion = {
       row.banner_public_id = updates.bannerImage?.publicId ?? null;
     }
 
-    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select();
     if (error) throw new Error(error.message);
-    return toPromotion(data);
+    return toPromotion(data?.[0] ?? null);
   },
 
   async findByIdAndDelete(id) {

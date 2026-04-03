@@ -48,15 +48,15 @@ const Category = {
     if (filter.id)       query = query.eq('id', filter.id);
     if (filter.name)     query = query.eq('name', filter.name);
 
-    const { data, error } = await query.limit(1).single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toCategory(data);
+    const { data, error } = await query.limit(1);
+    if (error) throw new Error(error.message);
+    return toCategory(data?.[0] ?? null);
   },
 
   async findById(id) {
-    const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toCategory(data);
+    const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).limit(1);
+    if (error) throw new Error(error.message);
+    return toCategory(data?.[0] ?? null);
   },
 
   async countDocuments(filter = {}) {
@@ -115,13 +115,13 @@ const Category = {
     }
     // Handle $inc for productCount
     if (updates.$inc?.productCount !== undefined) {
-      const { data: current } = await supabase.from(TABLE).select('product_count').eq('id', id).single();
-      row.product_count = (current?.product_count ?? 0) + updates.$inc.productCount;
+      const { data: current } = await supabase.from(TABLE).select('product_count').eq('id', id).limit(1);
+      row.product_count = (current?.[0]?.product_count ?? 0) + updates.$inc.productCount;
     }
 
-    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select().single();
+    const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select();
     if (error) throw new Error(error.message);
-    return toCategory(data);
+    return toCategory(data?.[0] ?? null);
   },
 
   async findByIdAndDelete(id) {

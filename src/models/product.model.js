@@ -85,9 +85,10 @@ const Product = {
       .from(TABLE)
       .select('*, categories!products_category_id_fkey(id, name, slug, icon)')
       .eq('id', id)
-      .single();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    return toProduct(data, data?.categories);
+      .limit(1);
+    if (error) throw new Error(error.message);
+    const row = data?.[0] ?? null;
+    return toProduct(row, row?.categories);
   },
 
   async countDocuments(filter = {}) {
@@ -149,14 +150,14 @@ const Product = {
     if (updates.reviews         !== undefined) row.reviews          = updates.reviews;
 
     if (updates.$inc?.viewCount) {
-      const { data: cur } = await supabase.from(TABLE).select('view_count').eq('id', id).single();
-      row.view_count = (cur?.view_count ?? 0) + updates.$inc.viewCount;
+      const { data: cur } = await supabase.from(TABLE).select('view_count').eq('id', id).limit(1);
+      row.view_count = (cur?.[0]?.view_count ?? 0) + updates.$inc.viewCount;
     }
 
     if (row.price !== undefined || row.original_price !== undefined) {
-      const { data: cur } = await supabase.from(TABLE).select('price, original_price').eq('id', id).single();
-      const p  = row.price          ?? cur?.price;
-      const op = row.original_price ?? cur?.original_price;
+      const { data: cur } = await supabase.from(TABLE).select('price, original_price').eq('id', id).limit(1);
+      const p  = row.price          ?? cur?.[0]?.price;
+      const op = row.original_price ?? cur?.[0]?.original_price;
       row.discount_percent = _calcDiscount(p, op);
     }
 
@@ -164,10 +165,10 @@ const Product = {
       .from(TABLE)
       .update(row)
       .eq('id', id)
-      .select('*, categories!products_category_id_fkey(id, name, slug, icon)')
-      .single();
+      .select('*, categories!products_category_id_fkey(id, name, slug, icon)');
     if (error) throw new Error(error.message);
-    return toProduct(data, data?.categories);
+    const updated = data?.[0] ?? null;
+    return toProduct(updated, updated?.categories);
   },
 
   async findByIdAndDelete(id) {
