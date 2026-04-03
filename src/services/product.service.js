@@ -129,7 +129,8 @@ export const createProduct = async (data, files = []) => {
     throw new AppError('Name, description, price and category are required', 400);
   }
 
-  const categoryExists = await Category.findById(category);
+  const categoryId = typeof category === 'object' ? category?.id : category;
+  const categoryExists = await Category.findById(categoryId);
   if (!categoryExists) throw new AppError('Category not found', 404);
 
   let images = [];
@@ -147,7 +148,7 @@ export const createProduct = async (data, files = []) => {
     description:    description.trim(),
     price:          safeParseFloat(price, 'price'),
     originalPrice:  originalPrice ? safeParseFloat(originalPrice, 'originalPrice') : undefined,
-    category,
+    category:       categoryId,
     subcategory:    subcategory?.trim(),
     images,
     specifications: safeParseJSON(specifications, 'specifications'),
@@ -159,7 +160,7 @@ export const createProduct = async (data, files = []) => {
     isNewArrival:   toBool(isNewArrival),
   });
 
-  Category.findByIdAndUpdate(category, { $inc: { productCount: 1 } }).catch((err) =>
+  Category.findByIdAndUpdate(categoryId, { $inc: { productCount: 1 } }).catch((err) =>
     logger.warn(`productCount increment failed: ${err.message}`)
   );
 
@@ -194,11 +195,15 @@ export const updateProduct = async (id, data, files = []) => {
     delete updates.imageUrl;
   }
 
-  if (updates.category && updates.category !== (typeof product.category === 'object' ? product.category.id : product.category)) {
+  if (updates.category !== undefined) {
+    updates.category = typeof updates.category === 'object' ? updates.category?.id : updates.category;
+  }
+
+  const oldCategoryId = typeof product.category === 'object' ? product.category.id : product.category;
+  if (updates.category && updates.category !== oldCategoryId) {
     const categoryExists = await Category.findById(updates.category);
     if (!categoryExists) throw new AppError('Category not found', 404);
 
-    const oldCategoryId = typeof product.category === 'object' ? product.category.id : product.category;
     Promise.all([
       Category.findByIdAndUpdate(oldCategoryId,    { $inc: { productCount: -1 } }),
       Category.findByIdAndUpdate(updates.category, { $inc: { productCount:  1 } }),

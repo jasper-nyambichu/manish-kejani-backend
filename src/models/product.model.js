@@ -125,9 +125,10 @@ const Product = {
     };
     const { data: created, error } = await supabase.from(TABLE).insert(row).select(
       '*, categories!products_category_id_fkey(id, name, slug, icon)'
-    ).single();
+    );
     if (error) throw new Error(error.message);
-    return toProduct(created, created.categories);
+    const c = created?.[0] ?? null;
+    return toProduct(c, c?.categories);
   },
 
   async findByIdAndUpdate(id, updates, { new: returnNew = false } = {}) {
