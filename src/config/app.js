@@ -44,6 +44,9 @@ const createApp = () => {
         // Always allow Vercel deployments for this project
         if (origin.includes('manish-kejani.vercel.app')) return cb(null, true);
         if (origin.includes('vercel.app')) return cb(null, true);
+        // Always allow production domains
+        if (origin.includes('manishhouseholds.co.ke')) return cb(null, true);
+        if (origin.includes('manishkejani.co.ke')) return cb(null, true);
         // Check against configured origins
         if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
         cb(new Error(`CORS: origin ${origin} not allowed`));
