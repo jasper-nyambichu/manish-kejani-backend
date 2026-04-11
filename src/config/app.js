@@ -27,6 +27,9 @@ import whatsappRoutes from '../routes/public/whatsapp.routes.js';
 const createApp = () => {
   const app = express();
 
+  // Trust Render/proxy X-Forwarded-For headers for rate limiting
+  app.set('trust proxy', 1);
+
   app.use(helmet());
 
   const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
