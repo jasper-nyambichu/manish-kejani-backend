@@ -23,6 +23,7 @@ import adminCategoryRoutes from '../routes/admin/adminCategory.routes.js';
 import adminPromotionRoutes from '../routes/admin/adminPromotion.routes.js';
 import adminDashboardRoutes from '../routes/admin/adminDashboard.routes.js';
 import whatsappRoutes from '../routes/public/whatsapp.routes.js';
+import wishlistRoutes from '../routes/public/wishlist.routes.js';
 
 const createApp = () => {
   const app = express();
@@ -103,6 +104,7 @@ const createApp = () => {
   app.use('/api/admin/promotions', adminPromotionRoutes);
   app.use('/api/admin/dashboard', adminDashboardRoutes);
   app.use('/api/v1/whatsapp', whatsappRoutes);
+  app.use('/api/v1/wishlist', wishlistRoutes);
   app.use(notFound);
   app.use(errorHandler);
 
