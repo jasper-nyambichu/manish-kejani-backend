@@ -77,6 +77,7 @@ export const getDashboardStats = asyncHandler(async (_req, res) => {
   });
 });
 
+/** Powers admin storefront customer list (GET /api/admin/dashboard/customers) — consumed by frontend admin Customers page. */
 export const listCustomers = asyncHandler(async (req, res) => {
   const page  = parseInt(req.query.page  ?? '1',  10);
   const limit = parseInt(req.query.limit ?? '20', 10);
@@ -99,9 +100,16 @@ export const listCustomers = asyncHandler(async (req, res) => {
 
   sendSuccess(res, 200, 'Customers retrieved', {
     users: (users ?? []).map(u => ({
-      id: u.id, username: u.username, email: u.email, phone: u.phone,
-      isVerified: u.is_verified, authProvider: u.auth_provider,
-      createdAt: u.created_at, lastLogin: u.last_login,
+      id: u.id,
+      username: u.username,
+      name: u.username,
+      email: u.email,
+      phone: u.phone,
+      isVerified: u.is_verified,
+      authProvider: u.auth_provider,
+      createdAt: u.created_at,
+      joinedDate: u.created_at,
+      lastLogin: u.last_login,
     })),
     pagination: { total: count ?? 0, page, limit, pages: Math.ceil((count ?? 0) / limit) },
   });

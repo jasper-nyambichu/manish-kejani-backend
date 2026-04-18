@@ -1,6 +1,6 @@
 // src/routes/public/whatsapp.routes.js
 import { Router } from 'express';
-import { getWhatsAppNumber, buildWhatsAppUrl } from '../../services/whatsapp.service.js';
+import { getWhatsAppNumberOptional, buildWhatsAppUrl } from '../../services/whatsapp.service.js';
 import { sendSuccess } from '../../shared/utils/apiResponse.js';
 import asyncHandler from '../../shared/utils/asyncHandler.js';
 import { protect } from '../../middleware/userAuth.js';
@@ -10,7 +10,7 @@ import { AppError } from '../../shared/utils/AppError.js';
 const router = Router();
 
 router.get('/number', (_req, res) => {
-  const number = getWhatsAppNumber();
+  const number = getWhatsAppNumberOptional();
   sendSuccess(res, 200, 'WhatsApp number retrieved', { number });
 });
 

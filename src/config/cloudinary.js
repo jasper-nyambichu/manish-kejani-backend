@@ -44,6 +44,18 @@ const uploadBufferToCloudinary = (buffer, originalname) => {
   });
 };
 
+/** After `upload.single('bannerImage')` — promotes buffer to Cloudinary URL for promotion banners. */
+export const uploadSingleBannerToCloudinary = async (req, _res, next) => {
+  try {
+    if (!req.file?.buffer) return next();
+    const uploaded = await uploadBufferToCloudinary(req.file.buffer, req.file.originalname);
+    req.file = { ...req.file, path: uploaded.url, filename: uploaded.publicId };
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Middleware: runs after multer, uploads all buffered files to Cloudinary
 // Attaches results back to req.files as { path, filename } for compatibility
 export const uploadToCloudinary = async (req, _res, next) => {

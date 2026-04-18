@@ -1,8 +1,15 @@
 // src/services/whatsapp.service.js
 import { AppError } from '../shared/utils/AppError.js';
 
+/** Used by GET /api/v1/whatsapp/number — matches storefront fallback when unset (see frontend VITE_WHATSAPP_NUMBER). */
+export const getWhatsAppNumberOptional = () => {
+  const n = process.env.WHATSAPP_NUMBER?.trim();
+  return n || null;
+};
+
+/** Used when a configured number is required (e.g. POST /whatsapp/order/:productId). */
 export const getWhatsAppNumber = () => {
-  const number = process.env.WHATSAPP_NUMBER;
+  const number = getWhatsAppNumberOptional();
   if (!number) throw new AppError('WhatsApp number not configured', 500);
   return number;
 };
@@ -15,12 +22,12 @@ export const buildOrderMessage = ({ product, user, quantity = 1 }) => {
     `I'd like to order the following:`,
     ``,
     `Product: ${product.name}`,
-    `Price: KES ${product.price.toLocaleString()}`,
+    `Price: KSh ${product.price.toLocaleString()}`,
     `Quantity: ${quantity}`,
-    `Total: KES ${(product.price * quantity).toLocaleString()}`,
+    `Total: KSh ${(product.price * quantity).toLocaleString()}`,
     ``,
     `My details:`,
-    `Username: ${user.username}`,
+    `Name: ${user.username}`,
     `Phone: ${user.phone ?? 'Not provided'}`,
     ``,
     `Please confirm availability and delivery. Thank you!`,
