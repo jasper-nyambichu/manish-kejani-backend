@@ -19,17 +19,17 @@ const start = async () => {
 
     // Keep-alive ping — prevents Render free tier from spinning down
     // Pings the health endpoint every 14 minutes
-    if (process.env.NODE_ENV === 'production') {
-      const BACKEND_URL = process.env.BACKEND_URL ?? `https://manish-kejani-backend.onrender.com`;
-      setInterval(async () => {
-        try {
-          const res = await fetch(`${BACKEND_URL}/health`);
-          logger.info(`Keep-alive ping: ${res.status}`);
-        } catch (err) {
-          logger.warn(`Keep-alive ping failed: ${err.message}`);
-        }
-      }, 14 * 60 * 1000); // every 14 minutes
-    }
+    // if (process.env.NODE_ENV === 'production') {
+    //   const BACKEND_URL = process.env.BACKEND_URL ?? `https://manishkejanibackend-z541ccga.b4a.run`;
+    //   setInterval(async () => {
+    //     try {
+    //       const res = await fetch(`${BACKEND_URL}/health`);
+    //       logger.info(`Keep-alive ping: ${res.status}`);
+    //     } catch (err) {
+    //       logger.warn(`Keep-alive ping failed: ${err.message}`);
+    //     }
+    //   }, 14 * 60 * 1000); // every 14 minutes
+    // }
 
     const shutdown = (signal) => {
       logger.info(`${signal} received — shutting down`);

@@ -63,7 +63,7 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        value: https://manish-kejani-backend.onrender.com/api/v1/auth/google/callback
+        value: https://manishkejanibackend-z541ccga.b4a.run/api/v1/auth/google/callback
 
       # Session
       - key: SESSION_SECRET
@@ -75,7 +75,7 @@ services:
       - key: FRONTEND_URL
         value: https://manishkejani.co.ke
       - key: BACKEND_URL
-        value: https://manish-kejani-backend.onrender.com
+        value: https://manishkejanibackend-z541ccga.b4a.run
       - key: ALLOWED_ORIGINS
         value: https://manishkejani.co.ke,https://manish-kejani.vercel.app
 
