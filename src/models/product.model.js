@@ -37,7 +37,7 @@ const toProduct = (row, categoryRow = null) => {
 };
 
 const _calcDiscount = (price, originalPrice) => {
-  if (!originalPrice || !price) return 0;
+  if (!originalPrice || !price || originalPrice <= price) return 0;
   return Math.round(((originalPrice - price) / originalPrice) * 100);
 };
 
